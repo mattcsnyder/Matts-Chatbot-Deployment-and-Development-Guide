@@ -18,7 +18,7 @@ This guide walks you through choosing the right model, configuring deployment, a
 
 1️⃣ **[Deployment Options](#1-deployment-options)** – Compare **cloud hosting** vs. **self-hosting** to determine the best balance between **cost, speed, and scalability**.  
 
-2️⃣ **[Model Configuration and Selection](#2-model-configuration-and-selection)** – Set up models, tweak response parameters, and choose the best one for **your specific chatbot needs**.  
+2️⃣ **[Model Configuration and Selection](#2-model-configuration-and-selection)** – Set up models, tweak response parameters, and choose the best one for **your specific chatbot needs** — with dedicated subsections for each major use case: customer support, code generation, document RAG, SQL querying, creative writing, domain-specific bots, reasoning, and edge deployment.  
 
 3️⃣ **[Proprietary Data & Integration](#3-proprietary-data--integration)** – Leverage **fine-tuning, embeddings, and vector search (RAG)** to customize chatbots with **private or industry-specific data**.  
 
@@ -140,6 +140,174 @@ The open-source model landscape has matured considerably. Llama 3.x, Mistral Nem
 | **Mistral Nemo 12B / Gemma 3 12B** | High understanding, modest hardware | ⚡⚡⚡ | 16GB+ RAM |
 | **Llama 3.3 70B / Qwen2.5 72B** | Near-frontier open-source accuracy | ⚡⚡ | 48GB+ RAM or cloud |
 | **GPT-4o / Claude Sonnet (via API)** | Highest accuracy, no local hardware | ⚡ | Cloud-only |
+
+### **2.3 Customer Support & FAQ Bots**
+
+Customer support bots need to be **consistent, polite, and low on hallucination**. Response variance should be minimal — you want the same question to get the same answer every time. Set `temperature` to 0.1–0.3. For highly structured flows (e.g., IT ticket triage), a hybrid rule-based layer on top of the LLM still makes sense.
+
+| **Model** | **Why It Works** | **Recommended Setup** |
+|----------|----------------|----------------------|
+| **Llama 3.1 8B** | Strong instruction following, reliable tone | Self-hosted via Ollama |
+| **Phi-4-mini (3.8B)** | Fast, CPU-capable, good for simple FAQ | On-premise, no GPU required |
+| **Mistral-7B v0.3** | Balanced quality and speed | Ollama local or RunPod |
+| **GPT-4o-mini (API)** | Highest consistency, zero ops overhead | OpenAI API |
+
+**Tips:**
+- Give the model a system prompt that defines persona, scope, and escalation behavior
+- Keep a fallback: if confidence is low, route to a human or a rule-based response
+- Log all responses and sample them weekly to catch drift
+
+---
+
+### **2.4 Code Generation & Developer Tools**
+
+Code-specialized models significantly outperform general chat models on syntax accuracy, multi-language support, and following project conventions. Use these when building coding assistants, auto-complete tools, or code review bots.
+
+| **Model** | **Why It Works** | **Context Window** | **Recommended Setup** |
+|----------|----------------|-------------------|----------------------|
+| **Qwen2.5-Coder 7B** | Best-in-class code completion at 7B scale | 128k tokens | Ollama local |
+| **Qwen2.5-Coder 14B** | Higher accuracy for complex logic | 128k tokens | RTX 4090 / 5090 |
+| **DeepSeek-Coder-V2 16B** | Strong multi-language, code review | 128k tokens | Cloud GPU or RTX 5090 |
+| **GPT-4o (API)** | Best for architecture-level questions | 128k tokens | OpenAI API |
+
+**Quick start with Qwen2.5-Coder via Ollama:**
+```bash
+ollama pull qwen2.5-coder:7b
+```
+```python
+import ollama
+response = ollama.chat(
+    model="qwen2.5-coder:7b",
+    messages=[{"role": "user", "content": "Write a Python function to parse a JWT token."}],
+    options={"temperature": 0.1},
+)
+print(response["message"]["content"])
+```
+
+---
+
+### **2.5 Document Analysis & Knowledge Base (RAG)**
+
+RAG workloads need models with **large context windows** and strong ability to follow cited text without adding unsupported claims. The retrieval quality matters as much as the model — good chunking and embedding strategy goes a long way.
+
+| **Model** | **Context Window** | **Why It Works** | **Recommended Setup** |
+|----------|--------------------|-----------------|----------------------|
+| **Llama 3.1 8B** | 128k tokens | Free to run locally, large context | Ollama + FAISS |
+| **Mistral Nemo 12B** | 128k tokens | Strong summarization, open weights | RTX 4090 / 5090 |
+| **Gemma 3 12B** | 128k tokens | Good at following cited context | Ollama local |
+| **Claude Sonnet (API)** | 200k tokens | Best for very long single documents | Anthropic API |
+
+**Tips:**
+- Chunk documents at 512–1024 tokens with ~10% overlap to avoid context breaks
+- Re-rank retrieved chunks (e.g., with a cross-encoder) before passing to the LLM
+- Instruct the model to answer only from the provided context to reduce hallucination
+
+---
+
+### **2.6 SQL & Data Query Bots**
+
+Text-to-SQL requires **precision over creativity**. The model needs to understand your schema and produce valid, safe SQL — not approximate it. Always use a very low temperature (0.0–0.1) and pass your table schema in the system prompt.
+
+| **Model** | **Why It Works** | **Notes** |
+|----------|----------------|---------|
+| **Llama 3.1 8B** | Strong instruction following for SQL generation | Pair with `create_sql_query_chain` in LangChain |
+| **Qwen2.5 7B** | Solid text-to-SQL, good schema understanding | Low hallucination on JOIN queries |
+| **GPT-4o-mini (API)** | Most reliable for complex multi-table joins | Low cost per query, easiest to start |
+
+**Tips:**
+- Always inject the exact DDL (`CREATE TABLE` statements) into the system prompt
+- Add a validation step that checks generated SQL with `EXPLAIN` before executing
+- Restrict the LLM to `SELECT` only — never allow write operations from natural language
+
+---
+
+### **2.7 Creative & Long-form Writing**
+
+Creative writing benefits from **larger models with higher temperature** (0.7–1.0) and minimal system-prompt constraints. The model needs a rich enough vocabulary and enough parameters to maintain coherence across long outputs.
+
+| **Model** | **Why It Works** | **Recommended Setup** |
+|----------|----------------|----------------------|
+| **Llama 3.3 70B** | Rich vocabulary, strong long-form coherence | Groq or Together.ai (serverless) |
+| **Mistral Nemo 12B** | Creative and fluent, runs on a single GPU | RTX 4090 / 5090 local |
+| **Qwen2.5 72B** | Strong narrative structure, multilingual | Together.ai |
+| **Claude Opus (API)** | Best overall creative writing quality | Anthropic API |
+
+**Tips:**
+- Use a higher `top_p` (0.9–0.95) alongside higher temperature for more varied word choice
+- Seed the model with a style guide or sample passage in the system prompt to match a target voice
+- For long documents, generate in sections and pass a brief summary of prior content as context
+
+---
+
+### **2.8 Domain-Specific Bots: Medical, Legal, Finance**
+
+High-stakes domains require **low hallucination and citable answers**. Raw base models should never be deployed here without grounding. The two main options are RAG (retrieve from authoritative sources) or LoRA fine-tuning on curated domain data — ideally both.
+
+| **Approach** | **Best For** | **Recommended Models & Tools** |
+|-------------|-------------|-------------------------------|
+| **RAG over domain documents** | Citable answers from source material | Llama 3.1 8B + LlamaIndex + FAISS |
+| **LoRA fine-tuned model** | Consistent domain terminology and tone | Mistral-7B v0.3 fine-tuned via Unsloth |
+| **RAG + fine-tuning combined** | Maximum accuracy for production | Fine-tuned Llama 3.1 8B + retrieval layer |
+| **GPT-4o with system prompt** | Fast deployment, no training required | OpenAI API |
+
+**Tips:**
+- Always add a disclaimer in the system prompt (e.g., "This is not legal advice")
+- Track source attribution — every claim should point to a retrievable document
+- Evaluate with domain experts before deploying; standard benchmarks don't capture specialty accuracy
+
+---
+
+### **2.9 Reasoning & Multi-step Problem Solving**
+
+"Reasoning" models explicitly generate a chain-of-thought before producing an answer, dramatically improving accuracy on math, logic, and multi-step tasks. These are distinct from standard chat models — expect slower responses but significantly better results on hard problems.
+
+| **Model** | **Why It Works** | **Recommended Setup** |
+|----------|----------------|----------------------|
+| **DeepSeek R1 7B (distilled)** | Open-weights reasoning, runs locally | Ollama on RTX 4090 |
+| **DeepSeek R1 70B** | Best open reasoning quality | Together.ai serverless |
+| **o1-mini (API)** | Strong STEM and logical reasoning | OpenAI API |
+| **Qwen2.5 72B** | Good reasoning + 128k context window | Together.ai or cloud GPU |
+
+```bash
+# Pull the local reasoning model
+ollama pull deepseek-r1:7b
+```
+```python
+import ollama
+response = ollama.chat(
+    model="deepseek-r1:7b",
+    messages=[{"role": "user", "content": "A train leaves Chicago at 60mph..."}],
+)
+print(response["message"]["content"])
+```
+
+**Tips:**
+- Reasoning models work best with clearly stated, unambiguous problems
+- Don't use them for simple FAQ — the extended thinking adds latency with no benefit
+- The `<think>` block in the response is the model's scratchpad; strip it for end-user display
+
+---
+
+### **2.10 Edge & Offline Deployment**
+
+Edge deployment means **no cloud, no GPU, sometimes no internet**. Quantized small models (Q4_K_M format via Ollama) can run entirely on CPU and fit in as little as 1–3 GB of RAM, making them viable for Raspberry Pi, factory floor terminals, or air-gapped environments.
+
+| **Model** | **RAM Required** | **Quantization** | **Best For** |
+|----------|----------------|-----------------|------------|
+| **Llama 3.2 1B** | ~1 GB | Q4_K_M | Simplest tasks, IoT devices |
+| **Llama 3.2 3B** | ~2.5 GB | Q4_K_M | Basic chatbot on Raspberry Pi 5 |
+| **Phi-4-mini (3.8B)** | ~3 GB | Q4_K_M | Best quality-per-watt at small scale |
+| **Gemma 3 1B** | ~1 GB | Q4_K_M | Multilingual edge use |
+
+```bash
+# Pull a quantized model for CPU inference
+ollama pull llama3.2:3b-instruct-q4_K_M
+```
+
+**Tips:**
+- Q4_K_M quantization cuts memory in half versus fp16 with minimal quality loss — use it as your default
+- Disable GPU layers (`--num-gpu 0`) to run fully on CPU when no GPU is available
+- Pre-load the model into memory at startup; cold-start adds 5–15 seconds on CPU
 
 ---
 
