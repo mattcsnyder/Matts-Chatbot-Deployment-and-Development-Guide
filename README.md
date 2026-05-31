@@ -2,31 +2,35 @@
 
 ![chatbots](https://github.com/user-attachments/assets/b9540f26-d498-48f9-804e-f7f559d7d392)
 
-## Overview
+---
 
-Hi there! Through my own experiments with different chatbot models and hosting setups, I've learned a lot about what works best for speed, cost, and usability. This guide is a collection of those findings—designed to help you set up a chatbot that fits your needs, whether you're looking for something lightweight and local or a more powerful cloud-hosted solution.
+## **Table of Contents**
 
-From testing, I found that smaller models like Mistral-7B work surprisingly well for quick responses on personal machines, making them great for internal tools or support bots. On the other hand, fine-tuned models really shine when trained on specialized data, like legal or finance-specific assistants. If you need a chatbot that retrieves information from large documents, vector search with Retrieval-Augmented Generation (RAG) makes a huge difference—perfect for things like knowledge bases or policy search tools.
+1️⃣ **[Deployment Options](#1-deployment-options)** – Compare **cloud hosting** vs. **self-hosting** to determine the best balance between **cost, speed, and scalability**.
 
-This guide walks you through choosing the right model, configuring deployment, and optimizing performance while keeping costs low. Whether you're self-hosting or using cloud GPUs, I've tested different setups so you don't have to.
+2️⃣ **[Model Configuration and Selection](#2-model-configuration-and-selection)** – Set up models, tweak response parameters, and choose the best one for **your specific chatbot needs** — with dedicated subsections for each major use case: customer support, code generation, document RAG, SQL querying, creative writing, domain-specific bots, reasoning, and edge deployment.
 
-> **2026 Update:** This guide has been refreshed to reflect the current model landscape (Llama 3.x, Mistral Nemo, Gemma 3, Qwen 2.5), updated cloud providers including serverless inference options, and modernized code examples. The original 2025 baseline is preserved at the bottom for reference.
+3️⃣ **[Proprietary Data & Integration](#3-proprietary-data--integration)** – Leverage **fine-tuning, embeddings, and vector search (RAG)** to customize chatbots with **private or industry-specific data**.
+
+4️⃣ **[UI Integration Over Private Network](#4-ui-integration-over-private-network)** – Connect your chatbot to a **web interface**, build APIs for interaction, and explore how different models function in real-world applications.
+
+5️⃣ **[Choosing the Right Model: Performance vs. Efficiency](#5-choosing-the-right-model-performance-vs-efficiency)** – Findings from **experiments on model size**, exploring trade-offs between **speed, accuracy, and resource consumption**, and how fine-tuning impacts chatbot behavior.
+
+6️⃣ **[2025 Baseline Reference](#6-2025-baseline-reference)** – The original pricing benchmarks and model comparisons from initial testing, preserved for historical context.
 
 ---
 
-## **Table of Contents**  
+## Overview
 
-1️⃣ **[Deployment Options](#1-deployment-options)** – Compare **cloud hosting** vs. **self-hosting** to determine the best balance between **cost, speed, and scalability**.  
+Hi there! I started this guide in **2025** after spending a lot of time running experiments with different chatbot models and hosting setups. What began as personal notes on what worked and what didn't has grown into a living reference — updated here in 2026 to reflect how much the landscape has shifted in just one year.
 
-2️⃣ **[Model Configuration and Selection](#2-model-configuration-and-selection)** – Set up models, tweak response parameters, and choose the best one for **your specific chatbot needs** — with dedicated subsections for each major use case: customer support, code generation, document RAG, SQL querying, creative writing, domain-specific bots, reasoning, and edge deployment.  
+The core question this guide tries to answer is: *what's the fastest, cheapest path to a chatbot that actually works for your use case?* Through hands-on testing I found that smaller models like Mistral-7B punch well above their weight on personal machines, making them great for internal tools and support bots. Fine-tuned models really shine when trained on specialized data — legal, medical, or finance assistants being the clearest examples. And if you need a chatbot that retrieves information from large document sets, vector search with Retrieval-Augmented Generation (RAG) is now table stakes.
 
-3️⃣ **[Proprietary Data & Integration](#3-proprietary-data--integration)** – Leverage **fine-tuning, embeddings, and vector search (RAG)** to customize chatbots with **private or industry-specific data**.  
+Since the original 2025 version, the deployment story has changed a lot. Back then, running a capable model meant either paying for a cloud VM with a dedicated GPU or buying your own hardware. Today, **serverless inference APIs** — Groq, Together.ai, Fireworks AI, Cerebras, and others — let you call frontier-class open models with a single HTTP request and no infrastructure to manage. Hugging Face Inference Endpoints and Replicate have also matured into solid managed options for teams that want more control without full DevOps overhead. Mistral now runs their own hosted API (La Plateforme) for their model family, and the major cloud providers (AWS, Google Vertex AI, Azure AI) have all deepened their managed LLM offerings.
 
-4️⃣ **[UI Integration Over Private Network](#4-ui-integration-over-private-network)** – Connect your chatbot to a **web interface**, build APIs for interaction, and explore how different models function in real-world applications.  
+This guide covers choosing the right model, configuring deployment, and optimizing performance while keeping costs reasonable. Whether you're self-hosting on a gaming GPU, spinning up a cloud instance, or calling a serverless API, the goal is the same: a chatbot that fits your needs without over-engineering.
 
-5️⃣ **[Choosing the Right Model: Performance vs. Efficiency](#5-choosing-the-right-model-performance-vs-efficiency)** – Findings from **experiments on model size**, exploring trade-offs between **speed, accuracy, and resource consumption**, and how fine-tuning impacts chatbot behavior.  
-
-6️⃣ **[2025 Baseline Reference](#6-2025-baseline-reference)** – The original pricing benchmarks and model comparisons from initial testing, preserved for historical context.
+> **2026 Update:** Model tables, provider lists, and code examples have been refreshed throughout. Notable additions include: serverless inference providers (Groq, Together.ai, Fireworks AI, Cerebras), managed hosting options (Hugging Face Inference Endpoints, Replicate, Mistral La Plateforme), updated hardware covering the RTX 5090, eight new use-case model sections (2.3–2.10), LoRA fine-tuning in the code examples, and fixes to broken LangChain import paths. The original 2025 baseline is preserved in Section 6.
 
 ---
 
